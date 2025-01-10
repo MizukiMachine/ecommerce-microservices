@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+var (
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrWeakPassword       = errors.New("password does not meet security requirements")
+	ErrEmailAlreadyExists = errors.New("email already exists")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
+
+// User エンティティ
 type User struct {
 	ID        string
 	Email     string
@@ -16,12 +24,7 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-var (
-	ErrInvalidEmail = errors.New("invalid email format")
-	ErrWeakPassword = errors.New("password does not meet security requirements")
-)
-
-// ユーザー情報が正しいかチェックする関数
+// ユーザー情報が正しいかチェックする関数.ドメインのビジネスルール
 func (u *User) Validate() error {
 	if !isValidEmail(u.Email) {
 		return ErrInvalidEmail
@@ -34,6 +37,7 @@ func (u *User) Validate() error {
 	return nil
 }
 
+// メールアドレスのバリデーション
 func isValidEmail(email string) bool {
 	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	re := regexp.MustCompile(pattern)
