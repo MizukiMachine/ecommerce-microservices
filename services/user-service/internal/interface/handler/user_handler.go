@@ -1,3 +1,4 @@
+// services/user-service/internal/interface/handler/user_handler.go
 package handler
 
 import (
@@ -30,9 +31,9 @@ type UserResponse struct {
 	CreatedAt string `json:"created_at"`
 }
 
-// レスポンスの形式を定義
+// エラーレスポンスの形式
 type ErrorResponse struct {
-	Message string `json: "message"`
+	Message string `json:"message"`
 }
 
 // ハンドラー構造体
@@ -127,7 +128,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	// JWTトークンの生成（詳細は後ほど実装）
-	token := "dummy_jwt_token"
+	token := "dummy-jwt-token"
 
 	response := UserResponse{
 		ID:        output.ID,
@@ -135,6 +136,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		Name:      output.Name,
 		CreatedAt: output.CreatedAt.Format(time.RFC3339),
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 		"user":  response,
