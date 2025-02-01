@@ -101,6 +101,72 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// プロフィール取得ハンドラー
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	// コンテキストから認証済みユーザーのIDを取得
+	userID := c.GetString("userID") // authMiddlewareでセットされることを想定
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	// ユーザー情報の取得
+	user, err := h.userUseCase.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Message: "Failed to get user profile",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CreatedAt: user.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+// プロフィール更新ハンドラー
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	userID := c.GetString("userID")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	var req struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	// ユーザー情報の更新
+	user, err := h.userUseCase.UpdateUserProfile(c.Request.Context(), userID, req.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Message: "Failed to update user profile",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CreatedAt: user.CreatedAt.Format(time.RFC3339),
+	})
+}
+
 // ログインハンドラー
 func (h *UserHandler) Login(c *gin.Context) {
 	var req LoginRequest
