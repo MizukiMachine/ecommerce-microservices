@@ -35,7 +35,7 @@ func NewUserUseCase(repo domain.UserRepository) *UserUseCase {
 	}
 }
 
-// ユーザ作成のユースケース
+// ユーザー作成のユースケース
 func (uc *UserUseCase) CreateUser(ctx context.Context, input CreateUserInput) (*UserOutput, error) {
 	// 1. パスワードのハッシュ化
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -57,13 +57,13 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, input CreateUserInput) (*
 		return nil, err
 	}
 
-	// 4. メールアドレスが既に使われていないか確認
+	// 4. メールアドレスの重複チェック
 	existingUser, err := uc.userRepo.FindByEmail(ctx, input.Email)
 	if err == nil && existingUser != nil {
 		return nil, domain.ErrEmailAlreadyExists
 	}
 
-	// 5. ユーザの保存
+	// 5. ユーザーの保存
 	if err := uc.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
@@ -77,8 +77,52 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, input CreateUserInput) (*
 	}, nil
 }
 
+// ユーザー認証のユースケース
+// ユーザー情報取得
+func (uc *UserUseCase) GetUserByID(ctx context.Context, id string) (*UserOutput, error) {
+	user, err := uc.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, domain.ErrUserNotFound
+	}
+
+	return &UserOutput{
+		ID:        user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CreatedAt: user.CreatedAt,
+	}, nil
+}
+
+// プロフィール更新
+func (uc *UserUseCase) UpdateUserProfile(ctx context.Context, userID string, name string) (*UserOutput, error) {
+	user, err := uc.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, domain.ErrUserNotFound
+	}
+
+	user.Name = name
+	user.UpdatedAt = time.Now()
+
+	if err := uc.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return &UserOutput{
+		ID:        user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CreatedAt: user.CreatedAt,
+	}, nil
+}
+
 func (uc *UserUseCase) AuthenticateUser(ctx context.Context, email, password string) (*UserOutput, error) {
-	// 1. メールアドレスからユーザを検索
+	// 1. メールアドレスでユーザーを検索
 	user, err := uc.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
