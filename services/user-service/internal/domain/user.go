@@ -12,6 +12,7 @@ var (
 	ErrWeakPassword       = errors.New("password does not meet security requirements")
 	ErrEmailAlreadyExists = errors.New("email already exists")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserNotFound       = errors.New("user not found")
 )
 
 // User エンティティ
@@ -24,12 +25,14 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-// ユーザー情報が正しいかチェックする関数.ドメインのビジネスルール
+// ドメインのビジネスルール
 func (u *User) Validate() error {
+	// メールアドレスの検証
 	if !isValidEmail(u.Email) {
 		return ErrInvalidEmail
 	}
 
+	// パスワードの検証
 	if !isStrongPassword(u.Password) {
 		return ErrWeakPassword
 	}
@@ -44,7 +47,9 @@ func isValidEmail(email string) bool {
 	return re.MatchString(email)
 }
 
+// パスワード強度のチェック
 func isStrongPassword(password string) bool {
+	// 最小8文字、大文字小文字数字を含む
 	if len(password) < 8 {
 		return false
 	}
@@ -56,16 +61,11 @@ func isStrongPassword(password string) bool {
 	return hasUpper && hasLower && hasNumber
 }
 
-// ユーザー情報を扱うための操作を定義
+// UserRepository インターフェース
 type UserRepository interface {
-	// 新しいユーザーを作成
 	Create(ctx context.Context, user *User) error
-	// IDからユーザーを検索
 	FindByID(ctx context.Context, id string) (*User, error)
-	// メールアドレスからユーザーを検索
 	FindByEmail(ctx context.Context, email string) (*User, error)
-	// ユーザー情報を更新
 	Update(ctx context.Context, user *User) error
-	// ユーザーを削除
 	Delete(ctx context.Context, id string) error
 }
