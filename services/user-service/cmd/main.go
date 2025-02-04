@@ -4,8 +4,11 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
+	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/infrastructure/auth"
 	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/infrastructure/database"
+	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/infrastructure/middleware"
 	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/infrastructure/persistence"
 	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/interface/handler"
 	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/usecase"
@@ -47,7 +50,15 @@ func main() {
 	// 7. Ginルーターの設定
 	router := gin.Default()
 
-	// 8. ミドルウェアの設定
+	// 8. JWTサービスの初期化
+	jwtSecret := getEnv("JWT_SECRET", "your-secret-key")
+	jwtExpiration, _ := time.ParseDuration(getEnv("JWT_EXPIRATION", "24h"))
+	jwtService := auth.NewJWTService(jwtSecret, jwtExpiration)
+
+	// 9. 認証ミドルウェアの初期化
+	authMiddleware := middleware.NewAuthMiddleware(jwtService)
+
+	// 10. 基本ミドルウェアの設定
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
 
@@ -60,7 +71,7 @@ func main() {
 			users.POST("/login", userHandler.Login)
 
 			// 認証が必要なエンドポイント
-			auth := users.Use(authMiddleware())
+			auth := users.Use(authMiddleware.AuthRequired())
 			{
 				auth.GET("/profile", userHandler.GetProfile)
 				auth.PUT("/profile", userHandler.UpdateProfile)
@@ -83,7 +94,7 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// 認証ミドルウェア（実装は後ほど）
+// 認証ミドルウェア
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// JWT認証の実装
