@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	domain "github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/domain"
+	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/domain"
+	"github.com/MizukiMachine/ecommerce-microservices/services/user-service/internal/infrastructure/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,14 +26,58 @@ type UserOutput struct {
 
 // ユースケース構造体
 type UserUseCase struct {
-	userRepo domain.UserRepository
+	userRepo   domain.UserRepository
+	jwtService *auth.JWTService
 }
 
 // ユースケースの作成
-func NewUserUseCase(repo domain.UserRepository) *UserUseCase {
+func NewUserUseCase(repo domain.UserRepository, jwtService *auth.JWTService) *UserUseCase {
 	return &UserUseCase{
-		userRepo: repo,
+		userRepo:   repo,
+		jwtService: jwtService,
 	}
+}
+
+// ログイン用の出力構造体
+type LoginOutput struct {
+	Token     string
+	User      *UserOutput
+	ExpiresAt time.Time
+}
+
+// ログイン機能の実装
+func (uc *UserUseCase) Login(ctx context.Context, email, password string) (*LoginOutput, error) {
+	// 1. ユーザーの検索
+	user, err := uc.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	// 2. パスワードの検証
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	// 3. JWTトークンの生成
+	token, err := uc.jwtService.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. レスポンスの作成
+	return &LoginOutput{
+		Token: token,
+		User: &UserOutput{
+			ID:        user.ID,
+			Email:     user.Email,
+			Name:      user.Name,
+			CreatedAt: user.CreatedAt,
+		},
+		ExpiresAt: time.Now().Add(24 * time.Hour), // トークンの有効期限
+	}, nil
 }
 
 // ユーザー作成のユースケース
