@@ -41,19 +41,19 @@ func main() {
 	// 4. リポジトリの初期化
 	userRepo := persistence.NewUserRepository(db)
 
-	// 5. ユースケースの初期化
-	userUseCase := usecase.NewUserUseCase(userRepo)
-
-	// 6. ハンドラーの初期化
-	userHandler := handler.NewUserHandler(userUseCase)
-
-	// 7. Ginルーターの設定
-	router := gin.Default()
-
-	// 8. JWTサービスの初期化
+	// 5. JWTサービスの初期化
 	jwtSecret := getEnv("JWT_SECRET", "your-secret-key")
 	jwtExpiration, _ := time.ParseDuration(getEnv("JWT_EXPIRATION", "24h"))
 	jwtService := auth.NewJWTService(jwtSecret, jwtExpiration)
+
+	// 6. ユースケースの初期化
+	userUseCase := usecase.NewUserUseCase(userRepo, jwtService)
+
+	// 7. ハンドラーの初期化
+	userHandler := handler.NewUserHandler(userUseCase)
+
+	// 8. Ginルーターの設定
+	router := gin.Default()
 
 	// 9. 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
