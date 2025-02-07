@@ -41,6 +41,55 @@ type UserHandler struct {
 	userUseCase *usecase.UserUseCase
 }
 
+// LoginResponse 構造体の定義
+type LoginResponse struct {
+	Token     string       `json:"token"`
+	ExpiresAt time.Time    `json:"expires_at"`
+	User      UserResponse `json:"user"`
+}
+
+// ログインハンドラーの実装
+func (h *UserHandler) Login(c *gin.Context) {
+	// 1. リクエストのバリデーション
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	// 2. ログイン処理の実行
+	output, err := h.userUseCase.Login(c.Request.Context(), req.Email, req.Password)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := "Internal server error"
+
+		switch err {
+		case domain.ErrInvalidCredentials:
+			status = http.StatusUnauthorized
+			message = "Invalid email or password"
+		}
+
+		c.JSON(status, ErrorResponse{
+			Message: message,
+		})
+		return
+	}
+
+	// 3. レスポンスの返却
+	c.JSON(http.StatusOK, LoginResponse{
+		Token:     output.Token,
+		ExpiresAt: output.ExpiresAt,
+		User: UserResponse{
+			ID:        output.User.ID,
+			Email:     output.User.Email,
+			Name:      output.User.Name,
+			CreatedAt: output.User.CreatedAt.Format(time.RFC3339),
+		},
+	})
+}
+
 // ハンドラーの作成
 func NewUserHandler(uc *usecase.UserUseCase) *UserHandler {
 	return &UserHandler{
@@ -164,47 +213,5 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		Email:     user.Email,
 		Name:      user.Name,
 		CreatedAt: user.CreatedAt.Format(time.RFC3339),
-	})
-}
-
-// ログインハンドラー
-func (h *UserHandler) Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Message: "Invalid request format",
-		})
-		return
-	}
-
-	output, err := h.userUseCase.AuthenticateUser(c.Request.Context(), req.Email, req.Password)
-	if err != nil {
-		status := http.StatusInternalServerError
-		message := "Internal server error"
-
-		if err == domain.ErrInvalidCredentials {
-			status = http.StatusUnauthorized
-			message = "Invalid credentials"
-		}
-
-		c.JSON(status, ErrorResponse{
-			Message: message,
-		})
-		return
-	}
-
-	// JWTトークンの生成（詳細は後ほど実装）
-	token := "dummy-jwt-token"
-
-	response := UserResponse{
-		ID:        output.ID,
-		Email:     output.Email,
-		Name:      output.Name,
-		CreatedAt: output.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"user":  response,
 	})
 }
