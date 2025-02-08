@@ -62,11 +62,12 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(gin.Logger())
 
-	// 9. ルーティングの設定
+	// ルーティングの設定
 	v1 := router.Group("/api/v1")
 	{
 		users := v1.Group("/users")
 		{
+			// 認証不要のエンドポイント
 			users.POST("/register", userHandler.CreateUser)
 			users.POST("/login", userHandler.Login)
 
@@ -75,6 +76,7 @@ func main() {
 			{
 				auth.GET("/profile", userHandler.GetProfile)
 				auth.PUT("/profile", userHandler.UpdateProfile)
+				auth.POST("/refresh-token", authMiddleware.RefreshToken())
 			}
 		}
 	}
