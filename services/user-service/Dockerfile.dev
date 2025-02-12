@@ -1,0 +1,18 @@
+FROM golang:1.21
+
+# 開発ツールのインストール
+RUN go install github.com/cosmtrek/air@latest && \
+    go install github.com/go-delve/delve/cmd/dlv@latest
+
+WORKDIR /app
+
+# Air（ホットリロード）の設定ファイルをコピー
+COPY .air.toml ./
+
+ENV TZ=Asia/Tokyo
+
+EXPOSE 8080
+EXPOSE 2345
+
+# Air を使用してホットリロードを有効化
+CMD ["air", "-c", ".air.toml"]
