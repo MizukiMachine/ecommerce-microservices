@@ -1,7 +1,5 @@
 # Microservices-based E-commerce Platform
 
-## 🎯 プロジェクトの目的
-
 eコマースプラットフォームの構築
 
 ### マイクロサービスアーキテクチャ
